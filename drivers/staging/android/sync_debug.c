@@ -29,6 +29,15 @@
 
 #ifdef CONFIG_DEBUG_FS
 
+/**
+ * Reduce debug information. To enable more information please define
+ * SYNC_DEBUG
+ *
+ * [MTK] {{{
+ * #define SYNC_DEBUG
+ * [MTK] }}}
+ */
+
 static LIST_HEAD(sync_timeline_list_head);
 static DEFINE_SPINLOCK(sync_timeline_list_lock);
 static LIST_HEAD(sync_fence_list_head);
@@ -70,6 +79,9 @@ void sync_fence_debug_remove(struct sync_fence *fence)
 	spin_unlock_irqrestore(&sync_fence_list_lock, flags);
 }
 
+/* [MTK] {{{ */
+#ifdef SYNC_DEBUG
+/* [MTK] }}} */
 static const char *sync_status_str(int status)
 {
 	if (status == 0)
@@ -85,21 +97,23 @@ static void sync_print_pt(struct seq_file *s, struct sync_pt *pt, bool fence)
 {
 	int status = 1;
 	struct sync_timeline *parent = sync_pt_parent(pt);
+
 	/**
-	* [MTK] {{{
-	* It may be not safe if invoke fence_is_signaled_locked which may
-	* invoke fence_signal_lock. Hence we only check if the fence has been
-	* signaled or not.
-	*/
+	 *  [MTK] {{{
+	 *  It may be not safe if invoke fence_is_signaled_locked which may
+	 *  invoke fence_signal_lock. Hence we only check if the fence has been
+	 *  signaled or not.
+	 */
 	if (test_bit(FENCE_FLAG_SIGNALED_BIT, &pt->base.flags))
 		status = pt->base.status;
+
 	/**
-	* Origianl code goes:
-	*
-	* if (fence_is_signaled_locked(&pt->base))
-	* status = pt->base.status;
-	* [MTK] }}}
-	*/
+	 *  Origianl code goes:
+	 *
+	 *  if (fence_is_signaled_locked(&pt->base))
+	 *      status = pt->base.status;
+	 *  [MTK] }}}
+	 */
 
 	seq_printf(s, "  %s%spt %s",
 		   fence ? parent->name : "",
@@ -159,7 +173,7 @@ static void sync_print_fence(struct seq_file *s, struct sync_fence *fence)
 	unsigned long flags;
 	int i;
 
-	seq_printf(s, "[%pK] %s: %s\n", fence, fence->name,
+	seq_printf(s, "[%p] %s: %s\n", fence, fence->name,
 		   sync_status_str(atomic_read(&fence->status)));
 
 	for (i = 0; i < fence->num_fences; ++i) {
@@ -183,9 +197,15 @@ static void sync_print_fence(struct seq_file *s, struct sync_fence *fence)
 	}
 	spin_unlock_irqrestore(&fence->wq.lock, flags);
 }
+/* [MTK] {{{ */
+#endif /* SYNC_DEBUG */
+/* [MTK] }}} */
 
 static int sync_debugfs_show(struct seq_file *s, void *unused)
 {
+/* [MTK] {{{ */
+#ifdef SYNC_DEBUG
+/* [MTK] }}} */
 	unsigned long flags;
 	struct list_head *pos;
 
@@ -213,6 +233,9 @@ static int sync_debugfs_show(struct seq_file *s, void *unused)
 		seq_puts(s, "\n");
 	}
 	spin_unlock_irqrestore(&sync_fence_list_lock, flags);
+/* [MTK] {{{ */
+#endif
+/* [MTK] }}} */
 	return 0;
 }
 

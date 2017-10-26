@@ -184,7 +184,7 @@ static void fence_check_cb_func(struct fence *f, struct fence_cb *cb)
 	fence = check->fence;
 
 	if (atomic_dec_and_test(&fence->status))
-		wake_up_all(&fence->wq);
+			wake_up_all(&fence->wq);
 }
 
 /* TODO: implement a create which takes more that one sync_pt */
@@ -390,7 +390,7 @@ int sync_fence_wait(struct sync_fence *fence, long timeout)
 		return ret;
 	} else if (ret == 0) {
 		if (timeout) {
-			pr_info("fence timeout on [%pK] after %dms\n", fence,
+			pr_info("fence timeout on [%p] after %dms\n", fence,
 				jiffies_to_msecs(timeout));
 			sync_dump();
 		}
@@ -399,7 +399,7 @@ int sync_fence_wait(struct sync_fence *fence, long timeout)
 
 	ret = atomic_read(&fence->status);
 	if (ret) {
-		pr_info("fence error %ld on [%pK]\n", ret, fence);
+		pr_info("fence error %ld on [%p]\n", ret, fence);
 		sync_dump();
 	}
 	return ret;

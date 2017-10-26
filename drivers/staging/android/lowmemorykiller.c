@@ -98,7 +98,6 @@ int lowmem_minfree[9] = {
 	16 * 1024,	/* 64MB */
 };
 static int lowmem_minfree_size = 9;
-static uint32_t lowmem_lmkcount = 0;
 
 #ifdef CONFIG_HIGHMEM
 static int total_low_ratio = 1;
@@ -160,6 +159,7 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM) -
+						global_page_state(NR_UNEVICTABLE) -
 						total_swapcache_pages();
 
 	int print_extra_info = 0;
@@ -289,6 +289,13 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 		p = find_lock_task_mm(tsk);
 		if (!p)
 			continue;
+
+#ifdef CONFIG_MT_ENG_BUILD
+		if (p->signal->flags & SIGNAL_GROUP_COREDUMP) {
+			task_unlock(p);
+			continue;
+		}
+#endif
 
 		if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
 		    time_before_eq(jiffies, lowmem_deathpending_timeout)) {
@@ -499,7 +506,6 @@ log_again:
 #endif
 
 		send_sig(SIGKILL, selected, 0);
-		lowmem_lmkcount++;
 		rem += selected_tasksize;
 	}
 
@@ -740,7 +746,7 @@ module_param_cb(flm_warn_adj, &flm_warn_adj_ops, &lowmem_kernel_warn_adj, S_IRUG
 module_param_named(debug_adj, lowmem_debug_adj, short, S_IRUGO | S_IWUSR);
 #endif
 module_param_named(candidate_log, enable_candidate_log, uint, S_IRUGO | S_IWUSR);
-module_param_named(lmkcount, lowmem_lmkcount, uint, S_IRUGO);
+
 late_initcall(lowmem_init);
 module_exit(lowmem_exit);
 
